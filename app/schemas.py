@@ -189,3 +189,110 @@ class ProtocolInstance(BaseModel):
     configured: bool = Field(description="运行配置中是否已配置该协议")
     commands: list[str] = Field(default_factory=list, description="协议配置命令")
     running: bool | None = Field(default=None, description="守护进程是否运行中")
+
+
+class WriteMemoryOption(BaseModel):
+    write_memory: bool = Field(default=False, description="是否持久化到 frr.conf")
+
+
+class ProtocolActionResult(BaseModel):
+    success: bool = Field(default=True, description="操作是否成功")
+    message: str = Field(description="操作结果说明")
+    write_memory: bool = Field(default=False, description="是否已写入 frr.conf")
+
+
+class OspfInstanceCreate(WriteMemoryOption):
+    router_id: str | None = Field(default=None, description="OSPF Router ID", examples=["1.1.1.1"])
+    vrf: str | None = Field(default=None, description="VRF 名称，默认 default")
+
+
+class OspfInstanceUpdate(WriteMemoryOption):
+    router_id: str = Field(..., description="OSPF Router ID")
+    vrf: str | None = Field(default=None, description="VRF 名称")
+
+
+class OspfNetworkBody(WriteMemoryOption):
+    prefix: str = Field(..., description="网段", examples=["10.0.0.0/24"])
+    area: str = Field(..., description="OSPF 区域", examples=["0"])
+    vrf: str | None = Field(default=None, description="VRF 名称")
+
+
+class OspfRedistributeBody(WriteMemoryOption):
+    protocol: Literal["static", "connected", "bgp", "kernel", "rip", "isis"] = Field(
+        ..., description="重分发源协议"
+    )
+    enabled: bool = Field(default=True, description="启用或禁用重分发")
+    metric_type: Literal["1", "2"] | None = Field(default=None, description="外部路由 metric-type")
+    vrf: str | None = Field(default=None, description="VRF 名称")
+
+
+class OspfInterfaceBody(WriteMemoryOption):
+    area: str = Field(..., description="OSPF 区域")
+    network_type: Literal["broadcast", "point-to-point", "non-broadcast"] | None = Field(
+        default=None, description="接口网络类型"
+    )
+
+
+class Ospf6InstanceCreate(WriteMemoryOption):
+    router_id: str | None = Field(default=None, description="OSPFv3 Router ID")
+
+
+class Ospf6InterfaceBody(WriteMemoryOption):
+    area: str = Field(..., description="OSPFv3 区域")
+
+
+class Ospf6RedistributeBody(WriteMemoryOption):
+    protocol: Literal["static", "connected", "bgp", "kernel"] = Field(..., description="重分发源协议")
+    enabled: bool = Field(default=True, description="启用或禁用")
+
+
+class RipInstanceCreate(WriteMemoryOption):
+    version: int = Field(default=2, description="RIP 版本", ge=1, le=2)
+
+
+class RipNetworkBody(WriteMemoryOption):
+    prefix: str = Field(..., description="宣告网段", examples=["100.64.0.0/24"])
+
+
+class RipRedistributeBody(WriteMemoryOption):
+    protocol: Literal["static", "connected", "bgp", "ospf", "isis", "kernel"] = Field(
+        ..., description="重分发源协议"
+    )
+    enabled: bool = Field(default=True, description="启用或禁用")
+
+
+class RipngInterfaceBody(WriteMemoryOption):
+    interface: str = Field(..., description="参与 RIPng 的接口名", examples=["ens18"])
+
+
+class RipngRedistributeBody(WriteMemoryOption):
+    protocol: Literal["static", "connected", "bgp", "ospf6", "kernel"] = Field(
+        ..., description="重分发源协议"
+    )
+    enabled: bool = Field(default=True, description="启用或禁用")
+
+
+class IsisInstanceCreate(WriteMemoryOption):
+    tag: str = Field(..., description="IS-IS 实例标签", examples=["FRR"])
+    net: str | None = Field(
+        default=None,
+        description="NET 地址",
+        examples=["49.0001.0000.0000.0001.00"],
+    )
+    is_type: Literal["level-1", "level-2-only", "level-1-2"] | None = Field(
+        default="level-2-only", description="IS 类型"
+    )
+
+
+class IsisInstanceUpdate(WriteMemoryOption):
+    net: str | None = Field(default=None, description="NET 地址")
+    is_type: Literal["level-1", "level-2-only", "level-1-2"] | None = Field(
+        default=None, description="IS 类型"
+    )
+
+
+class IsisRedistributeBody(WriteMemoryOption):
+    protocol: Literal["static", "connected", "bgp", "ospf", "rip", "kernel"] = Field(
+        ..., description="重分发源协议"
+    )
+    enabled: bool = Field(default=True, description="启用或禁用")

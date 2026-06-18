@@ -70,10 +70,11 @@ else
     log "跳过 BGP 邻居写操作（无现有邻居）"
 fi
 
-log "=== OSPF / RIP / IS-IS ==="
+log "=== OSPF / RIP / IS-IS 读接口 ==="
 check_code GET /api/v1/ospf/instance 200
 check_code GET /api/v1/ospf/summary 200
 check_code GET /api/v1/ospf/neighbors 200
+check_code GET /api/v1/ospf/routes 200
 check_code GET /api/v1/ospf6/instance 200
 check_code GET /api/v1/ospf6/summary 200
 check_code GET /api/v1/rip/instance 200
@@ -83,6 +84,38 @@ check_code GET /api/v1/ripng/status 200
 check_code GET /api/v1/isis/instance 200
 check_code GET /api/v1/isis/summary 200
 check_code GET /api/v1/isis/neighbors 200
+
+log "=== 动态路由写接口（守护进程已运行时） ==="
+OSPF_CFG=$(curl -s "${BASE_URL}/api/v1/ospf/instance" "${HDR[@]}")
+if echo "$OSPF_CFG" | python3 -c "import sys,json; exit(0 if not json.load(sys.stdin).get('configured') else 1)" 2>/dev/null; then
+    check_code POST /api/v1/ospf/instance 200 -d '{"router_id":"1.1.1.1"}'
+fi
+check_code POST /api/v1/ospf/networks 200 -d '{"prefix":"10.88.0.0/24","area":"0"}'
+check_code DELETE /api/v1/ospf/networks 200 -d '{"prefix":"10.88.0.0/24","area":"0"}'
+if echo "$OSPF_CFG" | python3 -c "import sys,json; exit(0 if not json.load(sys.stdin).get('configured') else 1)" 2>/dev/null; then
+    check_code DELETE /api/v1/ospf/instance 200
+fi
+
+# RIP
+RIP_CFG=$(curl -s "${BASE_URL}/api/v1/rip/instance" "${HDR[@]}")
+if echo "$RIP_CFG" | python3 -c "import sys,json; exit(0 if json.load(sys.stdin).get('configured') else 1)" 2>/dev/null; then
+    check_code POST /api/v1/rip/networks 200 -d '{"prefix":"10.88.1.0/24"}'
+    check_code DELETE /api/v1/rip/networks 200 -d '{"prefix":"10.88.1.0/24"}'
+else
+    check_code POST /api/v1/rip/instance 200 -d '{"version":2}'
+    check_code POST /api/v1/rip/networks 200 -d '{"prefix":"10.88.1.0/24"}'
+    check_code DELETE /api/v1/rip/networks 200 -d '{"prefix":"10.88.1.0/24"}'
+fi
+
+# IS-IS
+ISIS_CFG=$(curl -s "${BASE_URL}/api/v1/isis/instance" "${HDR[@]}")
+if echo "$ISIS_CFG" | python3 -c "import sys,json; exit(0 if json.load(sys.stdin).get('configured') else 1)" 2>/dev/null; then
+    check_code PATCH /api/v1/isis/instance 200 -d '{"is_type":"level-1-2"}'
+    check_code PATCH /api/v1/isis/instance 200 -d '{"is_type":"level-2-only"}'
+else
+    check_code POST /api/v1/isis/instance 200 -d '{"tag":"TEST","net":"49.0001.0000.0000.0099.00"}'
+    check_code DELETE /api/v1/isis/instance 200
+fi
 
 log "=== 认证失败 ==="
 code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/api/v1/status")

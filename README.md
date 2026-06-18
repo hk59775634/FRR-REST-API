@@ -8,7 +8,7 @@
 - 静态路由 CRUD（支持 `write_memory` 持久化）
 - BGP 邻居、network、路由表管理
 - **动态路由开关**：通过 API 编辑 `/etc/frr/daemons` 启用/禁用 bgpd、ospfd、ripd 等
-- OSPF / OSPFv6 / RIP / RIPng / IS-IS 状态查询
+- OSPF / OSPFv6 / RIP / RIPng / IS-IS 实例与网络 CRUD、重分发、接口配置
 - ReDoc API 文档（中文）
 - systemd 服务安装脚本
 
@@ -44,6 +44,23 @@ curl -X PUT http://localhost:8080/api/v1/daemons/ripd \
   -H "X-API-Key: your-key" -H "Content-Type: application/json" \
   -d '{"enabled": false, "restart": true}'
 ```
+
+### OSPF 示例
+
+```bash
+# 创建实例并宣告网络
+curl -X POST http://localhost:8080/api/v1/ospf/instance \
+  -H "X-API-Key: your-key" -H "Content-Type: application/json" \
+  -d '{"router_id":"1.1.1.1","write_memory":true}'
+
+curl -X POST http://localhost:8080/api/v1/ospf/networks \
+  -H "X-API-Key: your-key" -H "Content-Type: application/json" \
+  -d '{"prefix":"10.0.0.0/24","area":"0","write_memory":true}'
+```
+
+### RIP / IS-IS
+
+参见 ReDoc 文档 `/redoc` 中 OSPF、RIP、IS-IS 分组。
 
 ## 自检
 
